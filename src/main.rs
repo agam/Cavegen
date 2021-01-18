@@ -22,11 +22,10 @@ const WALL_PROB_PCT: u8 = 40;
 fn main() {
     println!("Hello, world!");
 
-    let mut grid: Array2D<Cell> = Array2D::filled_with(Cell::Space, NUM_ROWS, NUM_COLS);
     let mut rng = rand::thread_rng();
 
     // Display.
-    let show_grid = || {
+    fn show_grid(grid: & Array2D<Cell>) {
         for row_iter in grid.rows_iter() {
             for cell in row_iter {
                 let cell_str = match cell {
@@ -40,7 +39,8 @@ fn main() {
     };
 
     // TODO: figure out why the "closure form" of this was harder to work with.
-    fn seed_caves(grid: &mut Array2D<Cell>, rng: &mut rand::rngs::ThreadRng) {
+    fn seed_caves(rng: &mut rand::rngs::ThreadRng) -> Array2D<Cell> {
+        let mut grid: Array2D<Cell> = Array2D::filled_with(Cell::Space, NUM_ROWS, NUM_COLS);
         fn is_edge(row: usize, col: usize) -> bool {
             (row == 0) ||
                 (col == 0) ||
@@ -73,8 +73,11 @@ fn main() {
                 assert!(result.is_ok());
             }
         }
+
+        grid
     };
 
-    seed_caves(&mut grid, &mut rng);
-    show_grid();
+    // TODO: figure out why the mutable access-version of this was harder to work with.
+    let grid = seed_caves(&mut rng);
+    show_grid(&grid);
 }
