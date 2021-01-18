@@ -23,12 +23,13 @@ fn main() {
 
     let mut grid = Array2D::filled_with(Cell::Space, NUM_ROWS, NUM_COLS);
 
+    // Display.
     let show_grid = || {
         for row_iter in grid.rows_iter() {
             for cell in row_iter {
                 let cell_str = match cell {
-                    Cell::Space => " ",
-                    Cell::Wall => ".",
+                    Cell::Space => ".",
+                    Cell::Wall => "#",
                 };
                 print!("{}", cell_str);
             }
@@ -37,7 +38,4 @@ fn main() {
     };
 
     show_grid();
-    //for &mut cell in foo.iter_mut() {
-        //println!("Debug: I got: {:?}", cell);
-    //}
 }
