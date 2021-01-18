@@ -1,5 +1,7 @@
 // A "translation" from https://bitbucket.org/agambrahma/caves/
 
+use array2d::Array2D;
+
 #[derive(Debug, Clone, Copy)]
 enum Cell {
     Space,
@@ -19,9 +21,23 @@ const WALL_PROB_PCT: i32 = 40;
 fn main() {
     println!("Hello, world!");
 
-    let mut foo: [Cell; NUM_COLS] = [Cell::Space; NUM_COLS];
+    let mut grid = Array2D::filled_with(Cell::Space, NUM_ROWS, NUM_COLS);
 
-    for &mut cell in foo.iter_mut() {
-        println!("Debug: I got: {:?}", cell);
-    }
+    let show_grid = || {
+        for row_iter in grid.rows_iter() {
+            for cell in row_iter {
+                let cell_str = match cell {
+                    Cell::Space => " ",
+                    Cell::Wall => ".",
+                };
+                print!("{}", cell_str);
+            }
+            println!();
+        }
+    };
+
+    show_grid();
+    //for &mut cell in foo.iter_mut() {
+        //println!("Debug: I got: {:?}", cell);
+    //}
 }
