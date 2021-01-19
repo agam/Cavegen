@@ -10,8 +10,8 @@ enum Cell {
 }
 
 struct Params {
-    r1_cutoff: i32,
-    r2_cutoff: Option<i32>
+    r1_cutoff: u8,
+    r2_cutoff: Option<i8>
 }
 
 const NUM_ROWS: usize = 5;
@@ -58,7 +58,7 @@ fn main() {
 
         for row in 0..NUM_ROWS {
             for col in 0..NUM_COLS {
-                let newVal =
+                let new_val =
                     if is_edge(row, col) {
                         Cell::Wall
                     } else if is_middle_row(row) {
@@ -69,13 +69,59 @@ fn main() {
                         Cell::Space
                     };
 
-                let result = grid.set(row, col, newVal);
+                let result = grid.set(row, col, new_val);
                 assert!(result.is_ok());
             }
         }
 
         grid
     };
+
+    // Helpers.
+    fn abs(n: usize) -> usize {
+        if n < 0 {
+            0 - n
+        } else {
+            n
+        }
+    }
+
+    fn get_neighbor_count(grid: & Array2D<Cell>, row: usize, col: usize, delta: usize) -> u8 {
+        let mut count = 0;
+
+        for i in (row - delta)..=(row+delta) {
+            for j in (col - delta)..=(col+delta) {
+                if i < 0 || i >= NUM_ROWS || j < 0 || j >= NUM_COLS {
+                    continue
+                }
+
+                // Skip corners when delta > 1.
+                let should_skip = delta > 1 && abs(i - row) == delta && (j - col) == delta;
+                if !should_skip {
+                    count = match grid.get(i, j).unwrap() {
+                        Cell::Wall => count + 1,
+                        Cell::Space => count,
+                    }
+                }
+            }
+        }
+
+        count
+    }
+
+    fn apply_cell_rules(r1: i8, r2: i8, params: Params) -> Cell {
+        if r1 >= params.r1_cutoff as i8 {
+            return Cell::Wall
+        }
+
+        if r2 <= params.r2_cutoff.unwrap_or(-1) {
+            return Cell::Wall
+        }
+
+        Cell::Space
+    }
+
+
 
     // TODO: figure out why the mutable access-version of this was harder to work with.
     let grid = seed_caves(&mut rng);
