@@ -9,6 +9,7 @@ enum Cell {
     Wall
 }
 
+#[derive(Debug, Clone, Copy)]
 struct Params {
     r1_cutoff: u8,
     r2_cutoff: Option<i8>
@@ -21,8 +22,6 @@ const WALL_PROB_PCT: u8 = 40;
 
 fn main() {
     println!("Hello, world!");
-
-    let mut rng = rand::thread_rng();
 
     // Display.
     fn show_grid(grid: & Array2D<Cell>) {
@@ -40,7 +39,7 @@ fn main() {
 
     // TODO: figure out why the "closure form" of this was harder to work with.
     fn seed_caves(rng: &mut rand::rngs::ThreadRng) -> Array2D<Cell> {
-        let mut grid: Array2D<Cell> = Array2D::filled_with(Cell::Space, NUM_ROWS, NUM_COLS);
+        let mut grid: Array2D<Cell> = Array2D::filled_with(Cell::Wall, NUM_ROWS, NUM_COLS);
         fn is_edge(row: usize, col: usize) -> bool {
             (row == 0) ||
                 (col == 0) ||
@@ -86,7 +85,7 @@ fn main() {
         }
     }
 
-    fn get_neighbor_count(grid: & Array2D<Cell>, row: usize, col: usize, delta: usize) -> u8 {
+    fn get_neighbor_count(grid: & Array2D<Cell>, row: usize, col: usize, delta: usize) -> i8 {
         let mut count = 0;
 
         for i in (row - delta)..=(row+delta) {
@@ -109,7 +108,7 @@ fn main() {
         count
     }
 
-    fn apply_cell_rules(r1: i8, r2: i8, params: Params) -> Cell {
+    fn apply_cell_rules(r1: i8, r2: i8, params: &Params) -> Cell {
         if r1 >= params.r1_cutoff as i8 {
             return Cell::Wall
         }
@@ -121,9 +120,60 @@ fn main() {
         Cell::Space
     }
 
+    fn iterate_caves(old_grid: &Array2D<Cell>, params: &Params) -> Array2D<Cell> {
+        let mut new_grid: Array2D<Cell> = Array2D::filled_with(Cell::Wall, NUM_ROWS, NUM_COLS);
+
+        for i in 1..(NUM_ROWS - 1) {
+            for j in 1 ..(NUM_COLS - 1) {
+                let num_neighbors_1 = get_neighbor_count(old_grid, i, j, 1);
+                let num_neighbors_2 = get_neighbor_count(old_grid, i, j, 2);
+
+                let new_cell = apply_cell_rules(num_neighbors_1, num_neighbors_2, params);
+
+                assert!(new_grid.set(i, j, new_cell).is_ok());
+            }
+        }
+
+        new_grid
+    }
+
+    fn run() {
+        let mut rng = rand::thread_rng();
+
+        // TODO: figure out why the mutable access-version of this was harder to work with.
+        let mut grid = seed_caves(&mut rng);
+        show_grid(&grid);
 
 
-    // TODO: figure out why the mutable access-version of this was harder to work with.
-    let grid = seed_caves(&mut rng);
-    show_grid(&grid);
+        // Two rounds of coalescing, larger then smaller islands.
+        let round_1 = Params {
+            r1_cutoff: 5,
+            r2_cutoff: Some(6),
+        };
+        let round_2 = Params {
+            r1_cutoff: 5,
+            r2_cutoff: Some(6),
+        };
+
+        // One round of pruning out the isolated walls.
+        let round_3 = Params {
+            r1_cutoff: 5,
+            r2_cutoff: None,
+        };
+
+        // TODO: populate params vector properly.
+        let params_list = vec![
+            round_1, round_1, round_1, round_1,
+            round_2, round_2, round_2,
+            round_3
+        ];
+
+        for params in params_list {
+            let new_grid = iterate_caves(&grid, &params);
+            show_grid(&new_grid);
+            grid = new_grid;
+        }
+    }
+
+    run()
 }
