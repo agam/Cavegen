@@ -15,8 +15,8 @@ struct Params {
     r2_cutoff: Option<i8>
 }
 
-const NUM_ROWS: usize = 5;
-const NUM_COLS: usize = 7;
+const NUM_ROWS: usize = 10;
+const NUM_COLS: usize = 20;
 
 const WALL_PROB_PCT: u8 = 40;
 
@@ -39,7 +39,7 @@ fn main() {
 
     // TODO: figure out why the "closure form" of this was harder to work with.
     fn seed_caves(rng: &mut rand::rngs::ThreadRng) -> Array2D<Cell> {
-        let mut grid: Array2D<Cell> = Array2D::filled_with(Cell::Wall, NUM_ROWS, NUM_COLS);
+        let mut grid: Array2D<Cell> = Array2D::filled_with(Cell::Space, NUM_ROWS, NUM_COLS);
         fn is_edge(row: usize, col: usize) -> bool {
             (row == 0) ||
                 (col == 0) ||
@@ -52,7 +52,7 @@ fn main() {
         }
 
         fn should_place_wall(generator: &mut rand::rngs::ThreadRng) -> bool {
-            generator.gen::<u8>() < WALL_PROB_PCT
+            generator.gen_range(0..100) < WALL_PROB_PCT
         }
 
         for row in 0..NUM_ROWS {
@@ -77,25 +77,28 @@ fn main() {
     };
 
     // Helpers.
-    fn abs(n: usize) -> usize {
-        if n < 0 {
-            0 - n
+    fn abs(n1: usize, n2: usize) -> usize {
+        if n1 > n2 {
+            n1 - n2
         } else {
-            n
+            n2 - n1
         }
     }
 
     fn get_neighbor_count(grid: & Array2D<Cell>, row: usize, col: usize, delta: usize) -> i8 {
         let mut count = 0;
 
-        for i in (row - delta)..=(row+delta) {
-            for j in (col - delta)..=(col+delta) {
-                if i < 0 || i >= NUM_ROWS || j < 0 || j >= NUM_COLS {
-                    continue
-                }
+        let startx = if col > delta { col } else { 0 };
+        let stopx = std::cmp::min(col + delta, NUM_COLS - 1);
+
+        let starty = if row > delta { row } else { 0 };
+        let stopy = std::cmp::min(row + delta, NUM_ROWS - 1);
+
+        for i in starty..=stopy {
+            for j in startx..=stopx {
 
                 // Skip corners when delta > 1.
-                let should_skip = delta > 1 && abs(i - row) == delta && (j - col) == delta;
+                let should_skip = delta > 1 && abs(i, row) == delta && abs(j, col) == delta;
                 if !should_skip {
                     count = match grid.get(i, j).unwrap() {
                         Cell::Wall => count + 1,
@@ -121,14 +124,28 @@ fn main() {
     }
 
     fn iterate_caves(old_grid: &Array2D<Cell>, params: &Params) -> Array2D<Cell> {
-        let mut new_grid: Array2D<Cell> = Array2D::filled_with(Cell::Wall, NUM_ROWS, NUM_COLS);
+        let mut new_grid: Array2D<Cell> = Array2D::filled_with(Cell::Space, NUM_ROWS, NUM_COLS);
+        
+        // Create outer boundary.
+        for i in [0, NUM_ROWS-1].iter() {
+            for j in 0..NUM_COLS {
+                assert!(new_grid.set(*i, j, Cell::Wall).is_ok());
+            }
+        }
+        for j in [0, NUM_COLS-1].iter() {
+            for i in 0..NUM_ROWS {
+                assert!(new_grid.set(i, *j, Cell::Wall).is_ok());
+            }
+        }
 
+        // Transform each cell.
         for i in 1..(NUM_ROWS - 1) {
             for j in 1 ..(NUM_COLS - 1) {
                 let num_neighbors_1 = get_neighbor_count(old_grid, i, j, 1);
                 let num_neighbors_2 = get_neighbor_count(old_grid, i, j, 2);
 
                 let new_cell = apply_cell_rules(num_neighbors_1, num_neighbors_2, params);
+                //println!("DebugAgam: at {:?}, {:?}, old = {:?}, neghbors = {:?}, {:?}, new = {:?}", i, j, old_grid.get(i, j).unwrap(), num_neighbors_1, num_neighbors_2, new_cell);
 
                 assert!(new_grid.set(i, j, new_cell).is_ok());
             }
@@ -168,7 +185,8 @@ fn main() {
             round_3
         ];
 
-        for params in params_list {
+        for (i, params) in params_list.iter().enumerate() {
+            println!("\nIteration #{}\n--------------------\n\n", i);
             let new_grid = iterate_caves(&grid, &params);
             show_grid(&new_grid);
             grid = new_grid;
